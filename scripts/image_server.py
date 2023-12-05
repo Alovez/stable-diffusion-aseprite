@@ -1589,7 +1589,16 @@ async def server(websocket):
                 loraFiles = loraFiles.split('|')
                 loraWeights = [int(x) for x in loraWeights.split('|')]
                 txt2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
-                await websocket.send("returning txt2img")
+                
+                encoded_string = "outputimg"
+                import base64
+                for file in os.listdir("temp/"):
+                    if file.endswith(".png"):
+                        output_path = os.path.join("temp/", file)
+                        rprint(f"\n[#ab333d]output_path: {output_path}")
+                        with open(output_path, "rb") as image_file:
+                            encoded_string += "," + str(base64.b64encode(image_file.read()))
+                await websocket.send(encoded_string)
             except Exception as e:
                 if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
@@ -1597,7 +1606,9 @@ async def server(websocket):
                     rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 play("error.wav")
                 await websocket.send("returning error")
-
+        elif message == 'imgsaved':
+            rprint(f"\n[#ab333d]img saved")
+            await websocket.send("returning txt2img")
         elif re.search(r"img2img.+", message):
             await websocket.send("running img2img")
             try:
@@ -1606,7 +1617,15 @@ async def server(websocket):
                 loraFiles = loraFiles.split('|')
                 loraWeights = [int(x) for x in loraWeights.split('|')]
                 img2img(loraPath, loraFiles, loraWeights, device, precision, int(pixelSize), int(maxBatchSize), prompt, negative, int(w), int(h), int(ddim_steps), float(scale), float(strength)/100, int(seed), int(n_iter), tilingX, tilingY, pixelvae, post)
-                await websocket.send("returning img2img")
+                encoded_string = "redrawimg"
+                import base64
+                for file in os.listdir("temp/"):
+                    if file.endswith(".png"):
+                        output_path = os.path.join("temp/", file)
+                        rprint(f"\n[#ab333d]output_path: {output_path}")
+                        with open(output_path, "rb") as image_file:
+                            encoded_string += "," + str(base64.b64encode(image_file.read()))
+                await websocket.send(encoded_string)
             except Exception as e: 
                 if "torch.cuda.OutOfMemoryError" in traceback.format_exc():
                     rprint(f"\n[#ab333d]ERROR: Generation failed due to insufficient GPU resources. If you are running other GPU heavy programs try closing them. Also try lowering the image generation size or maximum batch size")
@@ -1616,7 +1635,9 @@ async def server(websocket):
                     rprint(f"\n[#ab333d]ERROR:\n{traceback.format_exc()}")
                 play("error.wav")
                 await websocket.send("returning error")
-
+        elif message == 'imgredrawed':
+            rprint(f"\n[#ab333d]img saved")
+            await websocket.send("returning img2img")
         elif re.search(r"txt2pal.+", message):
             await websocket.send("running txt2pal")
             try:
@@ -1780,7 +1801,7 @@ rprint("\n" + climage(Image.open("logo.png"), "centered") + "\n\n")
 
 rprint("[#48a971]Starting Image Generator...")
 
-start_server = serve(server, "localhost", 8765)
+start_server = serve(server, "0.0.0.0", 8765)
 
 rprint("[#c4f129]Connected")
 
